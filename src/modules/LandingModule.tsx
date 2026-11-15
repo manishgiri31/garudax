@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Plane, Gauge, Fuel, AlertTriangle, RotateCcw, Mountain } from 'lucide-react';
+import { Plane, Fuel, AlertTriangle, RotateCcw, Mountain } from 'lucide-react';
 import { ModuleShell, ResultScreen } from '@/components/ModuleShell';
 import type { GameState } from '@/types';
 import { playThud, startRumble } from '@/ui/sound';
