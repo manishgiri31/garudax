@@ -12,11 +12,14 @@ import {
   Rocket,
   Volume2,
   VolumeX,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { MODULES, ALL_BADGES, levelFromXP, xpProgress } from '@/lib/gameState';
 import type { GameState, ModuleId, ModuleProgress } from '@/types';
 import { useVoice } from './useVoice';
+import { useSound } from './useSound';
 import { missionControlStageOpen } from './missionControl';
 import './outpost.css';
 
@@ -79,6 +82,7 @@ export function OutpostScreen({ state, onStart, onReset }: OutpostScreenProps) {
   const level = levelFromXP(state.totalXP);
   const prog = xpProgress(state.totalXP);
   const voice = useVoice();
+  const sound = useSound();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const rows: Row[] = MODULES.map((m, i) => ({
@@ -131,6 +135,21 @@ export function OutpostScreen({ state, onStart, onReset }: OutpostScreenProps) {
             <span className="text-slate-400">
               Callsign <span className="text-white font-semibold">{state.recruitName}</span>
             </span>
+            {sound.supported && (
+              <button
+                onClick={sound.toggle}
+                aria-pressed={sound.enabled}
+                title="Sound effects"
+                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  sound.enabled
+                    ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-200'
+                    : 'border-slate-700 bg-slate-900/60 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {sound.enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                Sound: {sound.enabled ? 'On' : 'Off'}
+              </button>
+            )}
             {voice.supported && (
               <button
                 onClick={voice.toggle}
