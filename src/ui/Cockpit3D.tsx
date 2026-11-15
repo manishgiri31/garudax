@@ -8,6 +8,7 @@ import { SPACE_IMAGES } from '@/ui/spaceImages';
 
 export interface Cockpit3DProps {
   view: CockpitView;
+  recenterToken: number;
   alarm: boolean;
   shake: boolean;
   target: ControlId | null;
@@ -15,13 +16,20 @@ export interface Cockpit3DProps {
   onPress: (id: ControlId) => void;
 }
 
-function Window({ view }: { view: CockpitView }) {
+function Window({ view, shake }: { view: CockpitView; shake: boolean }) {
   const tex = useLoader(THREE.TextureLoader, SPACE_IMAGES[view]);
   tex.colorSpace = THREE.SRGBColorSpace;
   const ref = useRef<THREE.Mesh>(null);
   useFrame((s) => {
-    // Gentle parallax so the scenery feels alive without a real motion model.
-    if (ref.current) ref.current.position.x = Math.sin(s.clock.elapsedTime * 0.05) * 0.3;
+    // The scenery drifts past the windows, slowly while cruising and faster under power.
+    // Sine-based motion (no UV scrolling) so the photo never shows a seam.
+    const t = s.clock.elapsedTime;
+    const f = shake ? 0.6 : 0.14;
+    if (ref.current) {
+      ref.current.position.x = Math.sin(t * f) * 0.7;
+      ref.current.position.y = 1.6 + Math.sin(t * f * 0.6) * 0.12;
+      ref.current.scale.setScalar(1 + Math.sin(t * f * 0.4) * 0.025);
+    }
   });
   return (
     <mesh ref={ref} position={[0, 1.6, -6]}>
@@ -90,6 +98,13 @@ function Switch({
         <cylinderGeometry args={[0.018, 0.018, 0.12]} />
         <meshStandardMaterial color="#e0e0e0" metalness={0.9} roughness={0.2} />
       </mesh>
+      {active && (
+        <Html position={[0, 0.22, 0]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
+          <div className="animate-bounce whitespace-nowrap font-mono text-[11px] font-bold text-amber-300 drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]">
+            ▼ PRESS
+          </div>
+        </Html>
+      )}
       <Html position={[0, 0.02, 0.17]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
         <div className={`whitespace-nowrap font-mono text-[9px] tracking-wider ${active ? 'text-amber-300' : 'text-slate-200/80'}`}>
           {label}
@@ -158,6 +173,20 @@ function Rig({ alarm, shake }: { alarm: boolean; shake: boolean }) {
   return <pointLight ref={light} position={[0, 2.6, 0]} color="#ff1a1a" distance={8} />;
 }
 
+// Returns the camera to the default commander's-seat view (button or R key).
+function Recenter({ token }: { token: number }) {
+  const { camera, controls, size } = useThree();
+  useEffect(() => {
+    if (token === 0) return;
+    const portrait = size.width < size.height;
+    camera.position.set(0, portrait ? 1.9 : 1.25, portrait ? 2.6 : 1.4);
+    const orbit = controls as unknown as { target?: THREE.Vector3; update?: () => void } | null;
+    orbit?.target?.set(0, 0.6, -1.3);
+    orbit?.update?.();
+  }, [token, camera, controls, size.width, size.height]);
+  return null;
+}
+
 function Fit() {
   const { camera, size } = useThree();
   useEffect(() => {
@@ -180,7 +209,7 @@ export default function Cockpit3D(p: Cockpit3DProps) {
         <pointLight position={[0, 1, 0]} intensity={2} color="#7ab8ff" distance={4} />
         <Stars radius={60} depth={20} count={1500} factor={3} fade />
         <Suspense fallback={null}>
-          <Window view={p.view} />
+          <Window view={p.view} shake={p.shake} />
         </Suspense>
         <Frame />
         <Console {...p} />
@@ -193,16 +222,23 @@ export default function Cockpit3D(p: Cockpit3DProps) {
           <meshStandardMaterial color="#20242c" roughness={0.9} />
         </mesh>
         <Fit />
+        <Recenter token={p.recenterToken} />
         <Rig alarm={p.alarm} shake={p.shake} />
         <OrbitControls
+          makeDefault
           target={[0, 0.6, -1.3]}
+          enableDamping
+          dampingFactor={0.08}
           enablePan={false}
-          enableZoom={false}
-          minAzimuthAngle={-0.8}
-          maxAzimuthAngle={0.8}
-          minPolarAngle={0.9}
-          maxPolarAngle={2.0}
-          rotateSpeed={0.5}
+          enableZoom
+          minDistance={1.1}
+          maxDistance={2.8}
+          minAzimuthAngle={-1.25}
+          maxAzimuthAngle={1.25}
+          minPolarAngle={0.7}
+          maxPolarAngle={2.2}
+          rotateSpeed={0.6}
+          zoomSpeed={0.8}
         />
       </Canvas>
     </div>

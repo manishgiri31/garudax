@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { ChevronLeft, Gauge, List, Lock, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Crosshair, Gauge, List, Lock, CheckCircle2 } from 'lucide-react';
 import { ResultScreen } from '@/components/ModuleShell';
 import { CURRICULUM, scoredItemCount } from '@/lib/cockpitCurriculum';
 import type { ControlId } from '@/lib/cockpitCurriculum';
@@ -30,6 +30,17 @@ export function CockpitAcademyModule({ onComplete, onExit }: CockpitAcademyModul
   const [flashing, setFlashing] = useState(false);
   const [finished, setFinished] = useState(false);
   const [completedLevels, setCompletedLevels] = useState<Set<number>>(new Set());
+  // Bumping this returns the camera to the default seat view.
+  const [recenterToken, setRecenterToken] = useState(0);
+  const recenter = () => setRecenterToken((n) => n + 1);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R') recenter();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Clear the red flash timer if the module closes mid-flash.
   useEffect(() => {
@@ -127,6 +138,7 @@ export function CockpitAcademyModule({ onComplete, onExit }: CockpitAcademyModul
       >
         <Cockpit3D
           view={level?.view ?? 'earth'}
+          recenterToken={recenterToken}
           alarm={alarm}
           shake={shake}
           target={target}
@@ -143,6 +155,12 @@ export function CockpitAcademyModule({ onComplete, onExit }: CockpitAcademyModul
           <ChevronLeft className="h-3.5 w-3.5" /> Base
         </button>
         <div className="flex items-center gap-2">
+          <button
+            onClick={recenter}
+            className="pointer-events-auto flex items-center gap-1 rounded-lg border border-slate-600 bg-slate-950/80 px-3 py-1.5 font-mono text-xs text-slate-200 hover:border-cyan-400"
+          >
+            <Crosshair className="h-3.5 w-3.5" /> Recenter
+          </button>
           <span className="rounded-full border border-slate-600 bg-slate-950/80 px-3 py-1 font-mono text-xs text-slate-300">
             CHECKS {earned}/{TOTAL_ITEMS}
           </span>
@@ -159,9 +177,15 @@ export function CockpitAcademyModule({ onComplete, onExit }: CockpitAcademyModul
 
       {flashing && <div className="pointer-events-none absolute inset-0 bg-red-600/25" />}
 
+      <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center">
+        <span className="rounded-full bg-slate-950/70 px-3 py-1 font-mono text-[10px] tracking-wider text-slate-300">
+          DRAG to look · SCROLL to zoom · R to recenter
+        </span>
+      </div>
+
       {!level && (
-        <div className="absolute inset-0 overflow-y-auto bg-slate-950/75 px-4 pb-8 pt-16 backdrop-blur-sm">
-          <div className="mx-auto max-w-xl">
+        <div className="absolute inset-x-3 bottom-3 top-24 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950/85 p-4 shadow-2xl backdrop-blur sm:inset-x-auto sm:left-3 sm:top-24 sm:w-96">
+          <div>
             <div className="mb-1 flex items-center justify-center gap-2 text-cyan-300">
               <Gauge className="h-5 w-5" />
               <h2 className="font-mono text-xl font-bold tracking-wider">3D COCKPIT ACADEMY</h2>
