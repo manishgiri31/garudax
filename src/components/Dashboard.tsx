@@ -7,6 +7,8 @@ import {
   Footprints,
   Plane,
   Siren,
+  Gauge,
+  Moon,
   Trophy,
   Lock,
   CheckCircle2,
@@ -35,6 +37,8 @@ const ICON_MAP: Record<string, typeof Rocket> = {
   Footprints,
   Plane,
   Siren,
+  Gauge,
+  Moon,
 };
 
 interface DashboardProps {

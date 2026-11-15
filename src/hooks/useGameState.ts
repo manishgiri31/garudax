@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { GameState } from '@/types';
-import { defaultGameState } from '@/lib/gameState';
+import { defaultGameState, migrateGameState } from '@/lib/gameState';
 
 const STORAGE_KEY = 'astronaut-training-save';
 
@@ -10,7 +10,7 @@ function loadState(): GameState {
     if (raw) {
       const parsed = JSON.parse(raw) as GameState;
       // Basic validation
-      if (parsed && parsed.modules && parsed.badges) return parsed;
+      if (parsed && parsed.modules && parsed.badges) return migrateGameState(parsed);
     }
   } catch {
     // ignore

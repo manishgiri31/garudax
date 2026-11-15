@@ -2,10 +2,12 @@ export type ModuleId =
   | 'eligibility'
   | 'mission'
   | 'knowledge'
+  | 'cockpit'
   | 'robotics'
   | 'physical'
   | 'launch'
   | 'landing'
+  | 'apollo'
   | 'emergency';
 
 export type ModuleStatus = 'locked' | 'available' | 'in-progress' | 'completed';

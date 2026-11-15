@@ -10,6 +10,8 @@ import { PhysicalModule } from '@/modules/PhysicalModule';
 import { LaunchModule } from '@/modules/LaunchModule';
 import { LandingModule } from '@/modules/LandingModule';
 import { EmergencyModule } from '@/modules/EmergencyModule';
+import { CockpitAcademyModule } from '@/modules/CockpitAcademyModule';
+import { ApolloMissionModule } from '@/modules/ApolloMissionModule';
 import type { ModuleId, EligibilityData, MissionType } from '@/types';
 
 function App() {
@@ -64,6 +66,14 @@ function App() {
           onExit={exit}
         />
       );
+    case 'cockpit':
+      return (
+        <CockpitAcademyModule
+          state={game.state}
+          onComplete={(s, st, xp) => handleComplete('cockpit', s, st, xp)}
+          onExit={exit}
+        />
+      );
     case 'robotics':
       return (
         <RoboticsModule
@@ -93,6 +103,14 @@ function App() {
         <LandingModule
           state={game.state}
           onComplete={(s, st, xp) => handleComplete('landing', s, st, xp)}
+          onExit={exit}
+        />
+      );
+    case 'apollo':
+      return (
+        <ApolloMissionModule
+          state={game.state}
+          onComplete={(s, st, xp) => handleComplete('apollo', s, st, xp)}
           onExit={exit}
         />
       );

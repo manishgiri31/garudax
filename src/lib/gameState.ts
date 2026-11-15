@@ -35,6 +35,13 @@ export const MODULES: {
     maxScore: 100,
   },
   {
+    id: 'cockpit',
+    name: '3D Cockpit Academy',
+    tagline: 'Fly the console: switches, checklists & emergency drills',
+    icon: 'Gauge',
+    maxScore: 100,
+  },
+  {
     id: 'robotics',
     name: 'Robotics & Operations',
     tagline: 'Master spacecraft systems & controls',
@@ -60,6 +67,13 @@ export const MODULES: {
     name: 'Landing Simulation',
     tagline: 'Pilot the spacecraft to a safe landing',
     icon: 'Plane',
+    maxScore: 100,
+  },
+  {
+    id: 'apollo',
+    name: 'Apollo Mission Simulator',
+    tagline: 'Launch the Saturn V, burn for the Moon and land the Eagle',
+    icon: 'Moon',
     maxScore: 100,
   },
   {
@@ -126,6 +140,20 @@ export const ALL_BADGES: Badge[] = [
     name: 'Crisis Manager',
     description: 'Handled all emergency scenarios',
     icon: 'ShieldAlert',
+    earned: false,
+  },
+  {
+    id: 'cockpit_ace',
+    name: 'Cockpit Ace',
+    description: 'Completed the 3D Cockpit Academy',
+    icon: 'Gauge',
+    earned: false,
+  },
+  {
+    id: 'apollo_flown',
+    name: 'The Eagle Has Landed',
+    description: 'Completed the Apollo Mission Simulator',
+    icon: 'Moon',
     earned: false,
   },
   {
@@ -205,13 +233,46 @@ export function getBadgeForModule(moduleId: ModuleId): string | null {
     eligibility: 'qualified',
     mission: 'mission_bound',
     knowledge: 'scholar',
+    cockpit: 'cockpit_ace',
     robotics: 'mechanic',
     physical: 'spacewalker',
     launch: 'launched',
     landing: 'pilot',
+    apollo: 'apollo_flown',
     emergency: 'crisis_manager',
   };
   return map[moduleId] ?? null;
+}
+
+/**
+ * Brings a saved game up to date with the current module list and badges.
+ * Existing progress is kept; modules added in a later release are slotted into
+ * their place in the chain, unlocked if their predecessor is already completed.
+ */
+export function migrateGameState(saved: GameState): GameState {
+  const savedById = new Map(saved.modules.map((m) => [m.moduleId, m]));
+  const modules: ModuleProgress[] = MODULES.map((def, idx) => {
+    const existing = savedById.get(def.id);
+    if (existing) return existing;
+    const prevId = idx > 0 ? MODULES[idx - 1].id : null;
+    const prev = prevId ? savedById.get(prevId) : undefined;
+    const unlocked = idx === 0 || prev?.status === 'completed';
+    return {
+      moduleId: def.id,
+      status: (unlocked ? 'available' : 'locked') as ModuleStatus,
+      score: 0,
+      stars: 0,
+      completedAt: null,
+    };
+  });
+
+  const badgeIds = new Set(saved.badges.map((b) => b.id));
+  const badges = [
+    ...saved.badges,
+    ...ALL_BADGES.filter((b) => !badgeIds.has(b.id)).map((b) => ({ ...b })),
+  ];
+
+  return { ...saved, modules, badges };
 }
 
 export function checkAllCompleted(state: GameState): boolean {
