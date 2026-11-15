@@ -3,6 +3,7 @@ import { Rocket, CheckCircle2, Circle, AlertTriangle, Timer, Zap } from 'lucide-
 import { ModuleShell, ResultScreen } from '@/components/ModuleShell';
 import type { GameState } from '@/types';
 import { playBeep, playLaunch } from '@/ui/sound';
+import { SPACE_IMAGES } from '@/ui/spaceImages';
 
 interface LaunchModuleProps {
   state: GameState;
@@ -183,24 +184,16 @@ export function LaunchModule({ onComplete, onExit }: LaunchModuleProps) {
         onExit={onExit}
       >
         <div className="flex flex-col items-center justify-center py-20 space-y-8">
-          {/* Rocket animation */}
-          <div className="relative w-32 h-64">
-            {/* Exhaust */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-32">
-              <div className="w-full h-full bg-gradient-to-t from-orange-500 via-yellow-400 to-transparent rounded-full opacity-80 animate-pulse" />
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-24 bg-gradient-to-t from-white to-transparent rounded-full opacity-60" />
-            </div>
-            {/* Rocket body */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 transition-transform"
-              style={{ transform: `translateY(${launchProgress * 0.3}px)` }}
-            >
-              <div className="w-12 h-32 bg-gradient-to-b from-slate-200 to-slate-400 rounded-t-2xl relative">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-900/80" />
-                <div className="absolute -bottom-1 -left-2 w-4 h-8 bg-slate-500 rounded-bl-lg" />
-                <div className="absolute -bottom-1 -right-2 w-4 h-8 bg-slate-500 rounded-br-lg" />
-              </div>
-            </div>
+          {/* Pad view: NASA Saturn V photograph; the ground drops away as the ascent progresses */}
+          <div className="relative w-full max-w-xl aspect-video overflow-hidden rounded-2xl border border-slate-700 bg-black">
+            <img
+              src={SPACE_IMAGES.pad}
+              alt="NASA photograph of a Saturn V launching"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500"
+              style={{ transform: `translateY(${launchProgress * 0.25}%) scale(${1 + launchProgress * 0.002})` }}
+            />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-orange-500/60 via-yellow-400/20 to-transparent animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
           </div>
 
           <div className="w-full max-w-sm">

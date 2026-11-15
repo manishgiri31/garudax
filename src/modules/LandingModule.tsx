@@ -3,6 +3,7 @@ import { Plane, Fuel, AlertTriangle, RotateCcw, Mountain } from 'lucide-react';
 import { ModuleShell, ResultScreen } from '@/components/ModuleShell';
 import type { GameState } from '@/types';
 import { playThud, startRumble } from '@/ui/sound';
+import { SPACE_IMAGES } from '@/ui/spaceImages';
 import '../ui/cockpit.css';
 
 interface LandingModuleProps {
@@ -382,6 +383,8 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
               className="absolute left-0 top-0"
               style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${fit})`, transformOrigin: 'top left' }}
             >
+              {/* NASA photograph of the lunar surface as the view outside the window */}
+              <img src={SPACE_IMAGES.moon} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-70" />
               {/* Stars */}
               {[...Array(40)].map((_, i) => (
                 <div
@@ -427,26 +430,22 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
                 />
               ))}
 
-              {/* Lander */}
+              {/* Craft position: the window is the viewpoint, so the lander is marked with a reticle and its real thrust plume */}
               <div
                 className="absolute"
                 style={{
-                  left: ship.x - 12,
-                  top: ship.y - 15,
-                  width: 24,
-                  height: 30,
+                  left: ship.x - 10,
+                  top: ship.y - 10,
+                  width: 20,
+                  height: 20,
                   transform: `rotate(${ship.angle}deg)`,
                   transformOrigin: 'center center',
                 }}
               >
-                <div className="w-6 h-5 bg-gradient-to-b from-slate-300 to-slate-500 rounded-t-md mx-auto" />
-                <div className="w-3 h-2 bg-blue-600/80 rounded-sm mx-auto -mt-4" />
-                <div className="flex justify-between px-0">
-                  <div className="w-1 h-4 bg-slate-400 -rotate-12" />
-                  <div className="w-1 h-4 bg-slate-400 rotate-12" />
-                </div>
+                <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-cyan-300/80" />
+                <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-cyan-300/80" />
                 {ship.thrusting && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-7 w-3 h-8 bg-gradient-to-b from-white via-yellow-400 to-orange-600 rounded-full animate-pulse opacity-90" />
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-6 bg-gradient-to-b from-white via-yellow-400 to-orange-600 rounded-full animate-pulse opacity-90" />
                 )}
               </div>
             </div>
