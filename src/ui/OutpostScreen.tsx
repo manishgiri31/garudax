@@ -20,6 +20,8 @@ import { MODULES, ALL_BADGES, levelFromXP, xpProgress } from '@/lib/gameState';
 import type { GameState, ModuleId, ModuleProgress } from '@/types';
 import { useVoice } from './useVoice';
 import { useSound } from './useSound';
+import { CrewTrainingScreen } from './CrewTrainingScreen';
+import { loadCrewTrainingPassed, saveCrewTrainingPassed } from './crewTrainingLogic';
 import { missionControlStageOpen } from './missionControl';
 import './outpost.css';
 
@@ -84,6 +86,9 @@ export function OutpostScreen({ state, onStart, onReset }: OutpostScreenProps) {
   const voice = useVoice();
   const sound = useSound();
   const [confirmReset, setConfirmReset] = useState(false);
+  // Stage 0 (crew training) must be passed before any module opens.
+  const [trainingPassed, setTrainingPassed] = useState<boolean>(() => loadCrewTrainingPassed());
+  const [trainingOpen, setTrainingOpen] = useState(false);
 
   const rows: Row[] = MODULES.map((m, i) => ({
     index: i,
@@ -111,9 +116,27 @@ export function OutpostScreen({ state, onStart, onReset }: OutpostScreenProps) {
 
   // Starting a stage: Mission Control announces it (if voice is on), then the stage opens.
   const startStage = (r: Row) => {
+    if (!trainingPassed) {
+      setTrainingOpen(true);
+      return;
+    }
     voice.speak(missionControlStageOpen(r.name, r.tagline));
     onStart(r.id);
   };
+
+  // Stage 0 passed: Stage 1 (the first module) opens.
+  const passTraining = () => {
+    saveCrewTrainingPassed(true);
+    setTrainingPassed(true);
+    setTrainingOpen(false);
+    const first = rows[0];
+    voice.speak(missionControlStageOpen(first.name, first.tagline));
+    onStart(first.id);
+  };
+
+  if (trainingOpen) {
+    return <CrewTrainingScreen onPass={passTraining} onExit={() => setTrainingOpen(false)} />;
+  }
 
   return (
     <div className="min-h-screen relative text-white bg-[#02030a] outpost-root">
@@ -354,6 +377,8 @@ export function OutpostScreen({ state, onStart, onReset }: OutpostScreenProps) {
               <button
                 onClick={() => {
                   setConfirmReset(false);
+                  saveCrewTrainingPassed(false);
+                  setTrainingPassed(false);
                   onReset();
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"

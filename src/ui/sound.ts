@@ -176,6 +176,57 @@ export function playThud(): void {
   }
 }
 
+/**
+ * Launch audio: a low ignition roar that builds over about 3 seconds, then holds.
+ * Returns a stop function to cut it early. Not triggered from a tap by itself.
+ */
+export function playLaunch(): () => void {
+  if (!ready() || !master) return () => {};
+  const buffer = getNoise();
+  if (!buffer) return () => {};
+  const t = ctx!.currentTime;
+
+  const src = ctx!.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const lowpass = ctx!.createBiquadFilter();
+  lowpass.type = 'lowpass';
+  lowpass.frequency.setValueAtTime(180, t);
+  lowpass.frequency.linearRampToValueAtTime(900, t + 3);
+  const gain = ctx!.createGain();
+  gain.gain.setValueAtTime(0.02, t);
+  gain.gain.linearRampToValueAtTime(0.5, t + 3);
+  src.connect(lowpass).connect(gain).connect(master);
+  src.start(t);
+
+  const osc = ctx!.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(48, t);
+  osc.frequency.linearRampToValueAtTime(70, t + 3);
+  const og = ctx!.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.linearRampToValueAtTime(0.05, t + 3);
+  osc.connect(og).connect(master);
+  osc.start(t);
+
+  let stopped = false;
+  const stop = () => {
+    if (stopped || !ctx) return;
+    stopped = true;
+    activeStops.delete(stop);
+    const now = ctx.currentTime;
+    for (const g of [gain, og]) {
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0, now + 0.4);
+    }
+    src.stop(now + 0.45);
+    osc.stop(now + 0.45);
+  };
+  activeStops.add(stop);
+  return stop;
+}
+
 /** Stops any running rumble. Called when sound is switched off. */
 export function stopAllSound(): void {
   for (const stop of Array.from(activeStops)) stop();
