@@ -1,0 +1,41 @@
+/* Cockpit styling for the landing simulation. Visual only. */
+
+.cockpit-glass {
+  box-shadow:
+    inset 0 0 0 4px #1e293b,
+    inset 0 0 0 5px rgba(34, 211, 238, 0.12),
+    0 10px 30px -12px rgba(0, 0, 0, 0.8);
+}
+
+.cockpit-window {
+  min-height: 180px;
+  background-color: #02030a;
+  background-image: url('./assets/earth-bg.jpg');
+  background-size: 260% auto;
+}
+
+.cockpit-window--port {
+  background-position: 12% 30%;
+}
+
+.cockpit-window--starboard {
+  background-position: 88% 70%;
+}
+
+.cockpit-panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.95));
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+}
+
+.kbd {
+  display: inline-block;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  text-align: center;
+}

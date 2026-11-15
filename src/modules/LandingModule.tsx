@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plane, Gauge, Fuel, AlertTriangle, RotateCcw, Mountain } from 'lucide-react';
 import { ModuleShell, ResultScreen } from '@/components/ModuleShell';
 import type { GameState } from '@/types';
+import { playThud, startRumble } from '@/ui/sound';
+import '../ui/cockpit.css';
 
 interface LandingModuleProps {
   state: GameState;
@@ -51,6 +53,19 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
   const particleRef = useRef(particles);
   const phaseRef = useRef(phase);
 
+  // Scale the fixed-size lander view down to fit narrow screens (visual only).
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(1);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const update = () => setFit(Math.min(1, el.clientWidth / CANVAS_W));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [phase]);
+
   // Terrain — flat landing pad in the middle
   const TERRAIN_HEIGHTS = generateTerrain();
 
@@ -82,6 +97,15 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
   useEffect(() => { keysRef.current = keys; }, [keys]);
   useEffect(() => { particleRef.current = particles; }, [particles]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Audio only: low rumble while the engine is firing, and one thud when the result lands.
+  useEffect(() => {
+    if (phase !== 'game' || !ship.thrusting) return;
+    return startRumble();
+  }, [phase, ship.thrusting]);
+  useEffect(() => {
+    if (result) playThud();
+  }, [result]);
 
   // Keyboard
   useEffect(() => {
@@ -175,11 +199,11 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
       }
 
       // Side thrust
-      if (k.has('arrowleft') || k.has('a') && newFuel > 0) {
+      if ((k.has('arrowleft') || k.has('a')) && newFuel > 0) {
         s.vx -= 0.05;
         s.angle = Math.max(-20, s.angle - 1);
         newFuel -= SIDE_FUEL;
-      } else if (k.has('arrowright') || k.has('d') && newFuel > 0) {
+      } else if ((k.has('arrowright') || k.has('d')) && newFuel > 0) {
         s.vx += 0.05;
         s.angle = Math.min(20, s.angle + 1);
         newFuel -= SIDE_FUEL;
@@ -344,127 +368,133 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
       icon={<Plane className="w-7 h-7" />}
       onExit={onExit}
     >
-      <div className="space-y-4">
-        {/* HUD */}
-        <div className="flex items-center justify-between bg-slate-900/80 border border-slate-700/50 rounded-xl px-4 py-3 flex-wrap gap-3">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <Gauge className="w-4 h-4 text-cyan-400" />
-              <span className="text-slate-400">Alt:</span>
-              <span className="font-bold text-white tabular-nums">{altitude}m</span>
+      <div className="cockpit space-y-3">
+        {/* Cockpit windows: NASA Earth views either side, the lander view in the middle */}
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(0,2fr)_1fr] gap-2 sm:gap-3 items-stretch">
+          <CockpitWindow className="hidden sm:block" side="port" />
+
+          <div
+            ref={stageRef}
+            className="cockpit-glass relative rounded-2xl overflow-hidden bg-[#02030a]"
+            style={{ height: CANVAS_H * fit }}
+          >
+            <div
+              className="absolute left-0 top-0"
+              style={{ width: CANVAS_W, height: CANVAS_H, transform: `scale(${fit})`, transformOrigin: 'top left' }}
+            >
+              {/* Stars */}
+              {[...Array(40)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full bg-white/20"
+                  style={{
+                    left: `${(i * 47) % CANVAS_W}px`,
+                    top: `${(i * 31) % (CANVAS_H * 0.6)}px`,
+                    width: `${1 + (i % 2)}px`,
+                    height: `${1 + (i % 2)}px`,
+                  }}
+                />
+              ))}
+
+              {/* Terrain */}
+              <svg className="absolute inset-0" width={CANVAS_W} height={CANVAS_H}>
+                <polygon
+                  points={`0,${CANVAS_H} ${TERRAIN_HEIGHTS.map((h, i) => `${i * 5},${h}`).join(' ')} ${CANVAS_W},${CANVAS_H}`}
+                  fill="#1a2a1a"
+                  stroke="#2d4a2d"
+                  strokeWidth="1"
+                />
+                {/* Landing pad */}
+                <rect x={PAD_START} y={PAD_Y - 3} width={PAD_END - PAD_START} height={6} fill="#22d3ee" opacity="0.6" />
+                <rect x={PAD_START} y={PAD_Y - 1} width={PAD_END - PAD_START} height={2} fill="#67e8f9" />
+                <text x={(PAD_START + PAD_END) / 2} y={PAD_Y - 8} fill="#67e8f9" fontSize="10" textAnchor="middle" fontWeight="bold">
+                  LZ
+                </text>
+              </svg>
+
+              {/* Exhaust particles */}
+              {particles.map((p, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full"
+                  style={{
+                    left: p.x - 2,
+                    top: p.y - 2,
+                    width: 4,
+                    height: 4,
+                    background: `rgba(255, ${100 + p.life * 155}, 0, ${p.life})`,
+                  }}
+                />
+              ))}
+
+              {/* Lander */}
+              <div
+                className="absolute"
+                style={{
+                  left: ship.x - 12,
+                  top: ship.y - 15,
+                  width: 24,
+                  height: 30,
+                  transform: `rotate(${ship.angle}deg)`,
+                  transformOrigin: 'center center',
+                }}
+              >
+                <div className="w-6 h-5 bg-gradient-to-b from-slate-300 to-slate-500 rounded-t-md mx-auto" />
+                <div className="w-3 h-2 bg-blue-600/80 rounded-sm mx-auto -mt-4" />
+                <div className="flex justify-between px-0">
+                  <div className="w-1 h-4 bg-slate-400 -rotate-12" />
+                  <div className="w-1 h-4 bg-slate-400 rotate-12" />
+                </div>
+                {ship.thrusting && (
+                  <div className="absolute left-1/2 -translate-x-1/2 top-7 w-3 h-8 bg-gradient-to-b from-white via-yellow-400 to-orange-600 rounded-full animate-pulse opacity-90" />
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Gauge className="w-4 h-4 text-amber-400" />
-              <span className="text-slate-400">Spd:</span>
-              <span className={`font-bold tabular-nums ${speed > 25 ? 'text-red-400' : speed > 18 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {speed}
-              </span>
+            <div className="absolute top-2 left-2 text-[10px] tracking-[0.2em] uppercase text-cyan-200/80 pointer-events-none">
+              Lander view
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Fuel className="w-4 h-4 text-emerald-400" />
-            <span className="text-slate-400 text-sm">Fuel:</span>
-            <div className="w-24 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+
+          <CockpitWindow className="hidden sm:block" side="starboard" />
+        </div>
+
+        {/* Flight panel */}
+        <div className="cockpit-panel rounded-2xl border border-slate-600/60 p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <Instrument label="Altitude" value={`${altitude} m`} />
+          <Instrument
+            label="Speed"
+            value={`${speed}`}
+            tone={speed > 25 ? 'red' : speed > 18 ? 'amber' : 'emerald'}
+          />
+          <Instrument label="Attitude" value={`${Math.round(ship.angle)}°`} />
+          <div className="rounded-xl bg-slate-950/60 border border-slate-700/60 p-2.5">
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+              <Fuel className="w-3 h-3 text-emerald-400" />
+              Fuel
+            </div>
+            <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${fuel > 30 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                style={{ width: `${fuel}%` }}
+                style={{ width: `${Math.max(0, Math.min(100, fuel))}%` }}
               />
             </div>
+            <div className="text-xs font-mono text-slate-300 mt-1 tabular-nums">{Math.round(fuel)}%</div>
           </div>
         </div>
 
-        {/* Game canvas */}
-        <div className="relative bg-[#02030a] border border-slate-700/50 rounded-2xl overflow-hidden mx-auto" style={{ maxWidth: `${CANVAS_W}px` }}>
-          <div className="relative" style={{ width: CANVAS_W, height: CANVAS_H }}>
-            {/* Stars */}
-            {[...Array(40)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-white/20"
-                style={{
-                  left: `${(i * 47) % CANVAS_W}px`,
-                  top: `${(i * 31) % (CANVAS_H * 0.6)}px`,
-                  width: `${1 + (i % 2)}px`,
-                  height: `${1 + (i % 2)}px`,
-                }}
-              />
-            ))}
-
-            {/* Terrain */}
-            <svg className="absolute inset-0" width={CANVAS_W} height={CANVAS_H}>
-              <polygon
-                points={`0,${CANVAS_H} ${TERRAIN_HEIGHTS.map((h, i) => `${i * 5},${h}`).join(' ')} ${CANVAS_W},${CANVAS_H}`}
-                fill="#1a2a1a"
-                stroke="#2d4a2d"
-                strokeWidth="1"
-              />
-              {/* Landing pad */}
-              <rect
-                x={PAD_START}
-                y={PAD_Y - 3}
-                width={PAD_END - PAD_START}
-                height={6}
-                fill="#22d3ee"
-                opacity="0.6"
-              />
-              <rect
-                x={PAD_START}
-                y={PAD_Y - 1}
-                width={PAD_END - PAD_START}
-                height={2}
-                fill="#67e8f9"
-              />
-              {/* Pad markers */}
-              <text x={(PAD_START + PAD_END) / 2} y={PAD_Y - 8} fill="#67e8f9" fontSize="10" textAnchor="middle" fontWeight="bold">
-                LZ
-              </text>
-            </svg>
-
-            {/* Exhaust particles */}
-            {particles.map((p, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full"
-                style={{
-                  left: p.x - 2,
-                  top: p.y - 2,
-                  width: 4,
-                  height: 4,
-                  background: `rgba(255, ${100 + p.life * 155}, 0, ${p.life})`,
-                }}
-              />
-            ))}
-
-            {/* Ship */}
-            <div
-              className="absolute"
-              style={{
-                left: ship.x - 12,
-                top: ship.y - 15,
-                width: 24,
-                height: 30,
-                transform: `rotate(${ship.angle}deg)`,
-                transformOrigin: 'center center',
-              }}
-            >
-              {/* Body */}
-              <div className="w-6 h-5 bg-gradient-to-b from-slate-300 to-slate-500 rounded-t-md mx-auto" />
-              {/* Window */}
-              <div className="w-3 h-2 bg-blue-600/80 rounded-sm mx-auto -mt-4" />
-              {/* Legs */}
-              <div className="flex justify-between px-0">
-                <div className="w-1 h-4 bg-slate-400 -rotate-12" />
-                <div className="w-1 h-4 bg-slate-400 rotate-12" />
-              </div>
-              {/* Thrust flame */}
-              {ship.thrusting && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-7 w-3 h-8 bg-gradient-to-b from-white via-yellow-400 to-orange-600 rounded-full animate-pulse opacity-90" />
-              )}
-            </div>
+        {/* Key legend: arrows and WASD both work */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-slate-900/70 border border-slate-700/60 px-3 py-2">
+            <span className="font-semibold text-cyan-300">Thrust</span>{' '}
+            <kbd className="kbd">↑</kbd> <kbd className="kbd">W</kbd> <kbd className="kbd">Space</kbd>
+          </div>
+          <div className="rounded-lg bg-slate-900/70 border border-slate-700/60 px-3 py-2">
+            <span className="font-semibold text-cyan-300">Steer</span>{' '}
+            <kbd className="kbd">←</kbd> <kbd className="kbd">A</kbd> &nbsp;/&nbsp; <kbd className="kbd">→</kbd> <kbd className="kbd">D</kbd>
           </div>
         </div>
 
-        {/* Mobile controls */}
+        {/* Touch controls for phones */}
         <div className="flex justify-center sm:hidden">
           <div className="grid grid-cols-3 gap-2 w-56">
             <div />
@@ -476,11 +506,32 @@ export function LandingModule({ onComplete, onExit }: LandingModuleProps) {
           </div>
         </div>
 
-        <p className="text-center text-sm text-slate-500">
-          Hold ↑/Space to thrust. Use ← → to steer. Land gently on the cyan pad!
+        <p className="text-center text-[11px] text-slate-500">
+          Earth imagery: NASA / JPL Photojournal PIA18033. Simulated cabin for training.
         </p>
       </div>
     </ModuleShell>
+  );
+}
+
+function CockpitWindow({ className = '', side }: { className?: string; side: 'port' | 'starboard' }) {
+  return (
+    <div className={`cockpit-window cockpit-glass relative rounded-2xl overflow-hidden ${side === 'port' ? 'cockpit-window--port' : 'cockpit-window--starboard'} ${className}`}>
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/10 via-transparent to-slate-950/70" />
+      <div className="absolute top-2 left-2 text-[10px] tracking-[0.2em] uppercase text-cyan-200/80">
+        {side === 'port' ? 'Port' : 'Starboard'} view
+      </div>
+    </div>
+  );
+}
+
+function Instrument({ label, value, tone = 'slate' }: { label: string; value: string; tone?: 'slate' | 'red' | 'amber' | 'emerald' }) {
+  const color = { slate: 'text-white', red: 'text-red-400', amber: 'text-amber-400', emerald: 'text-emerald-400' }[tone];
+  return (
+    <div className="rounded-xl bg-slate-950/60 border border-slate-700/60 p-2.5">
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
+      <div className={`mt-1 font-mono text-lg font-bold tabular-nums ${color}`}>{value}</div>
+    </div>
   );
 }
 

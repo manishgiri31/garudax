@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Rocket, CheckCircle2, Circle, AlertTriangle, Timer, Zap } from 'lucide-react';
 import { ModuleShell, ResultScreen } from '@/components/ModuleShell';
 import type { GameState } from '@/types';
+import { playBeep, playLaunch } from '@/ui/sound';
 
 interface LaunchModuleProps {
   state: GameState;
@@ -72,6 +73,15 @@ export function LaunchModule({ onComplete, onExit }: LaunchModuleProps) {
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [phase, countdown]);
+
+  // Audio only: countdown tick, then the launch roar while the launch phase runs.
+  useEffect(() => {
+    if (phase === 'countdown') playBeep();
+  }, [phase, countdown]);
+  useEffect(() => {
+    if (phase !== 'launch') return;
+    return playLaunch();
+  }, [phase]);
 
   // Launch animation
   useEffect(() => {
