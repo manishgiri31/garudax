@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { playCheckFail, playCheckPass, playCrewReady } from './sound';
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react';
 import {
   CHECKPOINTS,
@@ -374,7 +375,17 @@ export function CrewTrainingScreen({ onPass, onExit }: Props) {
     const r = tapCheck(statusesRef.current, index);
     setAll(r.statuses);
     if (r.hint) setHint(r.hint);
+    if (r.statuses[index] === 'pass') playCheckPass();
+    else if (r.statuses[index] === 'fail') playCheckFail();
   };
+
+  // Result cue, once per finished run.
+  useEffect(() => {
+    if (!finished) return;
+    if (passed) playCrewReady();
+    else playCheckFail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
 
   const tryAgain = () => {
     positionRef.current = START;

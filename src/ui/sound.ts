@@ -227,6 +227,39 @@ export function playLaunch(): () => void {
   return stop;
 }
 
+/** One short synthesized tone. Used by the short cue sounds below. */
+function tone(f0: number, f1: number, dur: number, type: OscillatorType, peak: number, delay = 0): void {
+  if (!ready() || !master) return;
+  const t = ctx!.currentTime + delay;
+  const osc = ctx!.createOscillator();
+  const g = ctx!.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g).connect(master);
+  osc.start(t);
+  osc.stop(t + dur + 0.02);
+}
+
+/** Two bright rising notes: a check passed. */
+export function playCheckPass(): void {
+  tone(660, 660, 0.12, 'sine', 0.12, 0);
+  tone(990, 990, 0.18, 'sine', 0.12, 0.12);
+}
+
+/** A low falling tone: a check was missed or out of order. */
+export function playCheckFail(): void {
+  tone(220, 150, 0.32, 'triangle', 0.14, 0);
+}
+
+/** A short rising arpeggio: crew ready. */
+export function playCrewReady(): void {
+  [523, 659, 784, 1046].forEach((f, i) => tone(f, f, 0.22, 'sine', 0.12, i * 0.13));
+}
+
 /** Stops any running rumble. Called when sound is switched off. */
 export function stopAllSound(): void {
   for (const stop of Array.from(activeStops)) stop();
