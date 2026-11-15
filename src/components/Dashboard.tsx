@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { Starfield } from '@/components/Starfield';
 import { HUD, ModuleStatusIcon, StarRating } from '@/components/HUD';
+import { OutpostScreen } from '@/ui/OutpostScreen';
+import { CrewPatch, CrewPhotoPicker } from '@/ui/CrewPhotoUI';
 import { MODULES } from '@/lib/gameState';
 import { completeModule, setInProgress } from '@/lib/progressEngine';
 import type { GameState, ModuleId } from '@/types';
@@ -81,9 +83,7 @@ export function Dashboard({ game, activeModule, setActiveModule }: DashboardProp
         <Starfield density={200} />
         <div className="relative z-10 max-w-lg w-full">
           <div className="text-center mb-8 animate-[fadeIn_0.6s_ease]">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 mb-4 shadow-lg shadow-blue-500/30">
-              <Rocket className="w-10 h-10 text-white" />
-            </div>
+            <CrewPatch />
             <h1 className="text-4xl font-bold tracking-tight mb-2">Astro Cadet Academy</h1>
             <p className="text-slate-400">Gamified Astronaut Training Program</p>
           </div>
@@ -124,6 +124,7 @@ export function Dashboard({ game, activeModule, setActiveModule }: DashboardProp
                 }}
               />
             </div>
+            <CrewPhotoPicker />
             <button
               onClick={() => {
                 setShowOnboarding(false);
@@ -139,6 +140,21 @@ export function Dashboard({ game, activeModule, setActiveModule }: DashboardProp
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Outpost layout lives in src/ui. The original layout below is kept as a fallback.
+  const USE_OUTPOST_LAYOUT = true;
+  if (USE_OUTPOST_LAYOUT) {
+    return (
+      <OutpostScreen
+        state={state}
+        onStart={handleModuleClick}
+        onReset={() => {
+          reset();
+          setShowOnboarding(true);
+        }}
+      />
     );
   }
 
